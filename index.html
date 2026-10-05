@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Scanner QR</title>
+  <style>
+    *{box-sizing:border-box}
+    html,body{margin:0;width:100%;height:100%;font-family:Arial,sans-serif;background:#111;color:#fff;overflow:hidden}
+    video{position:fixed;inset:0;width:100%;height:100%;object-fit:cover}
+    .overlay{position:fixed;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.65),transparent 30%,transparent 70%,rgba(0,0,0,.72));pointer-events:none}
+    .top{position:fixed;top:0;left:0;right:0;padding:calc(18px + env(safe-area-inset-top)) 18px 12px;text-align:center;z-index:4}
+    .top strong{font-size:20px}
+    .top div{margin-top:6px;font-size:13px;color:#ddd}
+    .frame{position:fixed;left:50%;top:50%;width:min(72vw,330px);aspect-ratio:1/1;transform:translate(-50%,-50%);border:3px solid #f49a24;border-radius:22px;box-shadow:0 0 0 9999px rgba(0,0,0,.18);z-index:3}
+    .status{position:fixed;left:16px;right:16px;bottom:calc(26px + env(safe-area-inset-bottom));z-index:4;text-align:center;padding:13px 14px;border-radius:13px;background:rgba(0,0,0,.62);font-size:14px}
+    .error{background:rgba(140,20,20,.86)}
+  </style>
+</head>
+<body>
+  <video id="video" autoplay playsinline muted></video>
+  <div class="overlay"></div>
+  <div class="top">
+    <strong>Scansiona il buono</strong>
+    <div>Inquadra il QR dentro il riquadro</div>
+  </div>
+  <div class="frame"></div>
+  <div id="status" class="status">Avvio fotocamera…</div>
+
+  <script>
+    const statusEl = document.getElementById('status');
+    const video = document.getElementById('video');
+    const params = new URLSearchParams(location.search);
+    const returnUrl = params.get('return') || '';
+    let stopped = false;
+
+    function fail(message) {
+      statusEl.textContent = message;
+      statusEl.classList.add('error');
+    }
+
+    function goBack(value) {
+      if (stopped) return;
+      stopped = true;
+
+      if (!returnUrl) {
+        fail('URL di ritorno mancante.');
+        return;
+      }
+
+      try {
+        const target = new URL(returnUrl);
+        target.searchParams.set('ui', 'mobile');
+        target.searchParams.set('scan', value);
+        location.replace(target.toString());
+      } catch (e) {
+        fail('URL di ritorno non valido.');
+      }
+    }
+
+    async function start() {
+      if (!('BarcodeDetector' in window)) {
+        fail('Questo browser non supporta il lettore QR nativo. Usa Chrome aggiornato.');
+        return;
+      }
+
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        fail('Fotocamera non disponibile.');
+        return;
+      }
+
+      let detector;
+
+      try {
+        detector = new BarcodeDetector({ formats: ['qr_code'] });
+      } catch (e) {
+        fail('Lettore QR non disponibile.');
+        return;
+      }
+
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: { ideal: 'environment' }
+          },
+          audio: false
+        });
+
+        video.srcObject = stream;
+        await video.play();
+        statusEl.textContent = 'Pronto';
+      } catch (e) {
+        fail('Permesso fotocamera negato o fotocamera non disponibile.');
+        return;
+      }
+
+      async function scan() {
+        if (stopped) return;
+
+        try {
+          const codes = await detector.detect(video);
+
+          if (codes && codes.length && codes[0].rawValue) {
+            goBack(codes[0].rawValue);
+            return;
+          }
+        } catch (e) {}
+
+        requestAnimationFrame(scan);
+      }
+
+      scan();
+    }
+
+    start();
+  </script>
+</body>
+</html>
