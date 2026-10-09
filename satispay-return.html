@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Ritorno a Buoni Mortise</title>
+  <style>
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      font-family: Arial, Helvetica, sans-serif;
+      background: #f6f2ec;
+      color: #222;
+    }
+
+    body {
+      display: grid;
+      min-height: 100vh;
+      place-items: center;
+      padding: 24px;
+    }
+
+    .card {
+      width: min(520px, 100%);
+      box-sizing: border-box;
+      background: #fff;
+      border: 1px solid #e7e1d9;
+      border-radius: 18px;
+      padding: 30px 24px;
+      text-align: center;
+      box-shadow: 0 14px 36px rgba(0,0,0,.08);
+    }
+
+    h1 {
+      margin: 0 0 12px;
+      font-size: 25px;
+    }
+
+    p {
+      margin: 8px 0;
+      color: #666;
+      line-height: 1.45;
+    }
+
+    .spinner {
+      width: 38px;
+      height: 38px;
+      margin: 0 auto 22px;
+      border: 4px solid #e8e3dd;
+      border-top-color: #222;
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+    }
+
+    button {
+      display: none;
+      width: 100%;
+      margin-top: 20px;
+      min-height: 48px;
+      border: 0;
+      border-radius: 10px;
+      background: #222;
+      color: #fff;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    body.fallback button {
+      display: block;
+    }
+
+    body.fallback .spinner {
+      display: none;
+    }
+
+    .order {
+      margin-top: 14px;
+      font-size: 12px;
+      color: #999;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <div class="spinner" aria-hidden="true"></div>
+
+    <h1>Ritorno ai Buoni Mortise…</h1>
+
+    <p>
+      Questa scheda si chiuderà automaticamente.
+    </p>
+
+    <p>
+      La pagina dei Buoni Mortise verificherà l'esito del pagamento.
+    </p>
+
+    <button id="closeButton" type="button">
+      Chiudi questa scheda
+    </button>
+
+    <div id="order" class="order"></div>
+  </main>
+
+  <script>
+    (function () {
+      const params =
+        new URLSearchParams(window.location.search);
+
+      const order =
+        String(params.get('order') || '').trim();
+
+      if (order) {
+        document.getElementById('order').textContent =
+          'Ordine ' + order;
+      }
+
+      function closeReturnTab() {
+        try {
+          if (window.opener) {
+            window.opener.focus();
+          }
+        } catch (error) {
+          // Il focus è opzionale.
+        }
+
+        try {
+          window.close();
+        } catch (error) {
+          // Mostriamo il fallback sotto.
+        }
+      }
+
+      document
+        .getElementById('closeButton')
+        .addEventListener('click', closeReturnTab);
+
+      /*
+       * Questa pagina è top-level e viene aperta originariamente da
+       * window.open() nella pagina Buoni Mortise: qui window.close()
+       * può quindi chiudere davvero la scheda, a differenza del JS
+       * dentro l'iframe HtmlService di Apps Script.
+       */
+      window.setTimeout(closeReturnTab, 100);
+
+      window.setTimeout(function () {
+        document.body.classList.add('fallback');
+      }, 900);
+    })();
+  </script>
+</body>
+</html>
